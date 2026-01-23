@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Floating Color Timer</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            min-height: 100vh;
+            transition: background-color 1s ease;
+            color: white;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 350px;
+            gap: 30px;
+        }
+
+        .main-content {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            min-height: calc(100vh - 40px);
+        }
+
+        .time-display {
+            font-size: 5rem;
+            font-weight: 300;
+            margin-bottom: 1rem;
+            letter-spacing: 3px;
+            text-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+
+        .date-display {
+            font-size: 1.8rem;
+            margin-bottom: 2rem;
+            opacity: 0.9;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .color-info {
+            background: rgba(0, 0, 0, 0.7);
+            padding: 2rem;
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            margin-top: 2rem;
+        }
+
+        .color-code {
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 2rem;
+            margin: 1rem 0;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .color-code:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.02);
+        }
+
+        .hsl-values {
+            display: flex;
+            gap: 1rem;
+            margin: 1.5rem 0;
+        }
+
+        .hsl-value {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 1rem;
+            border-radius: 10px;
+            flex: 1;
+            text-align: center;
+        }
+
+        .value-label {
+            font-size: 0.9rem;
+            opacity: 0.8;
+            margin-bottom: 0.5rem;
+        }
+
+        .value-number {
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+
+        /* Sidebar Styles */
+        .sidebar {
+            background: rgba(0, 0, 0, 0.7);
+            border-radius: 20px;
+            padding: 2rem;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            height: fit-content;
+        }
+
+        .sidebar h2 {
+            margin-bottom: 1.5rem;
+            font-weight: 300;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+            padding-bottom: 0.5rem;
+        }
+
+        .color-sample {
+            width: 100%;
+            height: 100px;
+            border-radius: 10px;
+            margin: 1rem 0;
+            border: 3px solid rgba(255, 255, 255, 0.2);
+            transition: transform 0.3s;
+        }
+
+        .color-sample:hover {
+            transform: scale(1.02);
+        }
+
+        .save-section {
+            margin: 2rem 0;
+        }
+
+        .share-buttons {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin: 1rem 0;
+        }
+
+        .btn {
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.3s;
+            font-weight: 600;
+        }
+
+        .btn-primary {
+            background: #4a6cf7;
+            color: white;
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+
+        .saved-colors {
+            margin-top: 2rem;
+        }
+
+        .saved-colors-list {
+            max-height: 300px;
+            overflow-y: auto;
+            margin-top: 1rem;
+        }
+
+        .saved-color-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            transition: all 0.3s;
+        }
+
+        .saved-color-item:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .saved-color-preview {
+            width: 40px;
+            height: 40px;
+            border-radius: 6px;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .saved-color-info {
+            flex: 1;
+            margin-left: 15px;
+        }
+
+        .saved-color-time {
+            font-size: 0.8rem;
+            opacity: 0.7;
+        }
+
+        .saved-color-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .icon-btn {
+            background: none;
+            border: none;
+            color: white;
+            cursor: pointer;
+            padding: 5px;
+            border-radius: 4px;
+            transition: all 0.3s;
+        }
+
+        .icon-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        /* Toast Notification */
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.3s;
+            z-index: 1000;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+            
+            .time-display {
+                font-size: 3rem;
+            }
+            
+            .sidebar {
+                order: -1;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="main-content">
+            <div class="time-display" id="currentTime">00:00:00</div>
+            <div class="date-display" id="currentDate">January 1, 2024</div>
+            
+            <div class="color-info">
+                <div style="font-size: 1.2rem; margin-bottom: 1rem;">Current Color Tone</div>
+                <div class="color-code" id="colorCode" title="Click to copy">#FFFFFF</div>
+                
+                <div class="hsl-values">
+                    <div class="hsl-value">
+                        <div class="value-label">HUE</div>
+                        <div class="value-number" id="hueValue">0°</div>
+                    </div>
+                    <div class="hsl-value">
+                        <div class="value-label">SATURATION</div>
+                        <div class="value-number" id="saturationValue">50%</div>
+                    </div>
+                    <div class="hsl-value">
+                        <div class="value-label">LIGHTNESS</div>
+                        <div class="value-number" id="lightnessValue">50%</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="sidebar">
+            <h2>Color Capture</h2>
+            
+            <div class="color-sample" id="colorSample"></div>
+            
+            <div class="save-section">
+                <div class="share-buttons">
+                    <button class="btn btn-primary" id="saveColorBtn">
+                        <i class="fas fa-bookmark"></i> Save Color
+                    </button>
+                    <button class="btn btn-secondary" id="copyColorBtn">
+                        <i class="fas fa-copy"></i> Copy HEX
+                    </button>
+                    <button class="btn btn-secondary" id="copyRGBBtn">
+                        <i class="fas fa-copy"></i> Copy RGB
+                    </button>
+                    <button class="btn btn-secondary" id="copyHSLBtn">
+                        <i class="fas fa-copy"></i> Copy HSL
+                    </button>
+                </div>
+                
+                <div class="share-buttons">
+                    <button class="btn btn-primary" id="shareTwitterBtn" style="background: #1DA1F2;">
+                        <i class="fab fa-twitter"></i> Tweet
+                    </button>
+                    <button class="btn btn-primary" id="shareUrlBtn" style="background: #7289DA;">
+                        <i class="fas fa-link"></i> Share URL
+                    </button>
+                </div>
+            </div>
+            
+            <div class="saved-colors">
+                <h3>Saved Colors</h3>
+                <div class="saved-colors-list" id="savedColorsList">
+                    <!-- Saved colors will appear here -->
+                </div>
+                <button class="btn btn-secondary" id="clearSavedBtn" style="width: 100%; margin-top: 10px;">
+                    <i class="fas fa-trash"></i> Clear All
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast">
+        <i class="fas fa-check-circle"></i>
+        <span id="toastMessage">Copied to clipboard!</span>
+    </div>
+
+    <script>
+        class FloatingColorTimer {
+            constructor() {
+                this.currentColor = '#FFFFFF';
+                this.currentHSL = { h: 0, s: 50, l: 50 };
+                this.currentRGB = { r: 255, g: 255, b: 255 };
+                this.savedColors = this.loadSavedColors();
+                
+                this.initializeElements();
+                this.initializeEventListeners();
+                this.updateTime();
+                this.updateColor();
+                this.renderSavedColors();
+                
+                setInterval(() => {
+                    this.updateTime();
+                    this.updateColor();
+                }, 1000);
+            }
+            
+            initializeElements() {
+                this.timeDisplay = document.getElementById('currentTime');
+                this.dateDisplay = document.getElementById('currentDate');
+                this.colorCode = document.getElementById('colorCode');
+                this.hueValue = document.getElementById('hueValue');
+                this.saturationValue = document.getElementById('saturationValue');
+                this.lightnessValue = document.getElementById('lightnessValue');
+                this.colorSample = document.getElementById('colorSample');
+                this.savedColorsList = document.getElementById('savedColorsList');
+                this.toast = document.getElementById('toast');
+                this.toastMessage = document.getElementById('toastMessage');
+            }
+            
+            initializeEventListeners() {
+                // Copy buttons
+                document.getElementById('copyColorBtn').addEventListener('click', () => this.copyToClipboard(this.currentColor));
+                document.getElementById('copyRGBBtn').addEventListener('click', () => this.copyToClipboard(`rgb(${this.currentRGB.r}, ${this.currentRGB.g}, ${this.currentRGB.b})`));
+                document.getElementById('copyHSLBtn').addEventListener('click', () => this.copyToClipboard(`hsl(${Math.round(this.currentHSL.h)}, ${Math.round(this.currentHSL.s)}%, ${Math.round(this.currentHSL.l)}%)`));
+                document.getElementById('colorCode').addEventListener('click', () => this.copyToClipboard(this.currentColor));
+                
+                // Save button
+                document.getElementById('saveColorBtn').addEventListener('click', () => this.saveCurrentColor());
+                
+                // Share buttons
+                document.getElementById('shareTwitterBtn').addEventListener('click', () => this.shareOnTwitter());
+                document.getElementById('shareUrlBtn').addEventListener('click', () => this.createShareableURL());
+                
+                // Clear button
+                document.getElementById('clearSavedBtn').addEventListener('click', () => this.clearSavedColors());
+            }
+            
+            updateTime() {
+                const now = new Date();
+                const timeString = now.toLocaleTimeString('en-US', { 
+                    hour12: false,
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                });
+                
+                const dateString = now.toLocaleDateString('en-US', { 
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                });
+                
+                this.timeDisplay.textContent = timeString;
+                this.dateDisplay.textContent = dateString;
+            }
+            
+            updateColor() {
+                const now = new Date();
+                const totalMilliseconds = now.getHours() * 3600000 + 
+                                        now.getMinutes() * 60000 + 
+                                        now.getSeconds() * 1000 + 
+                                        now.getMilliseconds();
+                
+                // Calculate HSL values
+                const hue = (totalMilliseconds / (24 * 60 * 60 * 1000)) * 360;
+                const minuteProgress = now.getMinutes() / 60;
+                const saturation = 30 + (Math.sin(minuteProgress * Math.PI * 2) * 20 + 20);
+                const hourProgress = now.getHours() / 24;
+                const lightness = 30 + (Math.sin(hourProgress * Math.PI * 2) * 10 + 10);
+                
+                // Store HSL values
+                this.currentHSL = { h: hue, s: saturation, l: lightness };
+                
+                // Convert to RGB and HEX
+                const rgb = this.hslToRgb(hue, saturation, lightness);
+                this.currentRGB = { r: rgb[0], g: rgb[1], b: rgb[2] };
+                this.currentColor = this.rgbToHex(rgb[0], rgb[1], rgb[2]);
+                
+                // Update UI
+                document.body.style.backgroundColor = this.currentColor;
+                this.colorSample.style.backgroundColor = this.currentColor;
+                this.colorCode.textContent = this.currentColor;
+                this.hueValue.textContent = `${Math.round(hue)}°`;
+                this.saturationValue.textContent = `${Math.round(saturation)}%`;
+                this.lightnessValue.textContent = `${Math.round(lightness)}%`;
+                
+                // Adjust text color for contrast
+                const textColor = lightness > 50 ? '#333' : '#fff';
+                document.body.style.color = textColor;
+            }
+            
+            hslToRgb(h, s, l) {
+                h /= 360;
+                s /= 100;
+                l /= 100;
+                
+                let r, g, b;
+                
+                if (s === 0) {
+                    r = g = b = l;
+                } else {
+                    const hue2rgb = (p, q, t) => {
+                        if (t < 0) t += 1;
+                        if (t > 1) t -= 1;
+                        if (t < 1/6) return p + (q - p) * 6 * t;
+                        if (t < 1/2) return q;
+                        if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+                        return p;
+                    };
+                    
+                    const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+                    const p = 2 * l - q;
+                    
+                    r = hue2rgb(p, q, h + 1/3);
+                    g = hue2rgb(p, q, h);
+                    b = hue2rgb(p, q, h - 1/3);
+                }
+                
+                return [
+                    Math.round(r * 255),
+                    Math.round(g * 255),
+                    Math.round(b * 255)
+                ];
+            }
+            
+            rgbToHex(r, g, b) {
+                return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1).toUpperCase()}`;
+            }
+            
+            // Color Saving and Sharing Functions
+            saveCurrentColor() {
+                const colorData = {
+                    hex: this.currentColor,
+                    hsl: this.currentHSL,
+                    rgb: this.currentRGB,
+                    timestamp: new Date().toISOString(),
+                    time: new Date().toLocaleTimeString(),
+                    date: new Date().toLocaleDateString()
+                };
+                
+                this.savedColors.unshift(colorData);
+                if (this.savedColors.length > 20) {
+                    this.savedColors = this.savedColors.slice(0, 20);
+                }
+                
+                this.saveToLocalStorage();
+                this.renderSavedColors();
+                this.showToast('Color saved!');
+            }
+            
+            renderSavedColors() {
+                this.savedColorsList.innerHTML = '';
+                
+                this.savedColors.forEach((color, index) => {
+                    const item = document.createElement('div');
+                    item.className = 'saved-color-item';
+                    item.innerHTML = `
+                        <div class="saved-color-preview" style="background-color: ${color.hex}"></div>
+                        <div class="saved-color-info">
+                            <div>${color.hex}</div>
+                            <div class="saved-color-time">${color.time}</div>
+                        </div>
+                        <div class="saved-color-actions">
+                            <button class="icon-btn copy-saved" title="Copy HEX">
+                                <i class="fas fa-copy"></i>
+                            </button>
+                            <button class="icon-btn delete-saved" title="Delete">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    `;
+                    
+                    // Add event listeners to the buttons in this item
+                    const copyBtn = item.querySelector('.copy-saved');
+                    const deleteBtn = item.querySelector('.delete-saved');
+                    
+                    copyBtn.addEventListener('click', () => {
+                        this.copyToClipboard(color.hex);
+                        this.showToast('Color copied!');
+                    });
+                    
+                    deleteBtn.addEventListener('click', () => {
+                        this.deleteSavedColor(index);
+                    });
+                    
+                    this.savedColorsList.appendChild(item);
+                });
+            }
+            
+            deleteSavedColor(index) {
+                this.savedColors.splice(index, 1);
+                this.saveToLocalStorage();
+                this.renderSavedColors();
+                this.showToast('Color deleted');
+            }
+            
+            clearSavedColors() {
+                if (this.savedColors.length > 0 && confirm('Clear all saved colors?')) {
+                    this.savedColors = [];
+                    this.saveToLocalStorage();
+                    this.renderSavedColors();
+                    this.showToast('All colors cleared');
+                }
+            }
+            
+            copyToClipboard(text) {
+                navigator.clipboard.writeText(text).then(() => {
+                    this.showToast('Copied to clipboard!');
+                }).catch(err => {
+                    console.error('Failed to copy: ', err);
+                    // Fallback for older browsers
+                    const textArea = document.createElement('textarea');
+                    textArea.value = text;
+                    document.body.appendChild(textArea);
+                    textArea.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(textArea);
+                    this.showToast('Copied to clipboard!');
+                });
+            }
+            
+            shareOnTwitter() {
+                const text = `Current color from Floating Color Timer: ${this.currentColor} ${new Date().toLocaleTimeString()}`;
+                const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&hashtags=ColorTimer,WebDesign`;
+                window.open(url, '_blank');
+            }
+            
+            createShareableURL() {
+                const params = new URLSearchParams({
+                    color: this.currentColor.replace('#', ''),
+                    time: new Date().toISOString()
+                });
+                
+                const shareUrl = `${window.location.origin}${window.location.pathname}?${params.toString()}`;
+                this.copyToClipboard(shareUrl);
+                this.showToast('Shareable URL copied!');
+            }
+            
+            loadSavedColors() {
+                try {
+                    const saved = localStorage.getItem('floatingColorTimerSavedColors');
+                    return saved ? JSON.parse(saved) : [];
+                } catch (e) {
+                    console.error('Error loading saved colors:', e);
+                    return [];
+                }
+            }
+            
+            saveToLocalStorage() {
+                try {
+                    localStorage.setItem('floatingColorTimerSavedColors', JSON.stringify(this.savedColors));
+                } catch (e) {
+                    console.error('Error saving colors:', e);
+                }
+            }
+            
+            showToast(message) {
+                this.toastMessage.textContent = message;
+                this.toast.classList.add('show');
+                
+                setTimeout(() => {
+                    this.toast.classList.remove('show');
+                }, 3000);
+            }
+            
+            // URL parameter parsing for shared colors
+            parseURLParameters() {
+                const params = new URLSearchParams(window.location.search);
+                const color = params.get('color');
+                
+                if (color) {
+                    // If a color is shared via URL, you could apply it
+                    // or save it automatically
+                    console.log('Shared color from URL:', color);
+                }
+            }
+        }
+        
+        // Initialize the timer when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            const timer = new FloatingColorTimer();
+            timer.parseURLParameters();
+        });
+    </script>
+</body>
+</html>
