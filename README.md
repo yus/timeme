@@ -1,4 +1,4 @@
-<img src="color-timer-composition-1769236804015.png" style="scale:1" />
+<img src="color-timer-composition-1769236804015.png" style="max-width:none !important; width=50%" />
 
 #### timeme 
 is floating color timer
