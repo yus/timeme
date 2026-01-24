@@ -1,3 +1,5 @@
+<img src="color-timer-composition-1769236804015.png" />
+
 #### floating-color-timer
 
 The color changes cyclically throughout the day, creating a unique visual timeline. Each second brings a subtle shift in hue, while hours and minutes influence saturation and lightness.
