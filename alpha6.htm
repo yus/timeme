@@ -1,0 +1,826 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TimeMe - Color Capture Timer</title>
+    <style>
+        :root {
+            --bg: #0a0a0a;
+            --surface: #1a1a1a;
+            --text: #e0e0e0;
+            --text2: #888;
+            --border: #2a2a2a;
+            --radius: 2px;
+            --transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            transition: background-color 0.5s ease;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        .app-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        /* Header */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        .mode-indicator {
+            background: var(--surface);
+            padding: 8px 16px;
+            border-radius: var(--radius);
+            font-size: 12px;
+            letter-spacing: 0.5px;
+            color: var(--text2);
+            border: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .mode-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        /* Main Grid */
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            align-items: start;
+        }
+
+        @media (max-width: 768px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Color Preview */
+        .color-preview-section {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .color-circle {
+            width: 100%;
+            aspect-ratio: 1;
+            border-radius: 50%;
+            background: hsl(0, 65%, 40%);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            transition: background-color 0.5s ease;
+            position: relative;
+            border: 2px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .timer-overlay {
+            position: absolute;
+            bottom: 20%;
+            left: 0;
+            right: 0;
+            text-align: center;
+        }
+
+        .timer {
+            font-size: clamp(32px, 5vw, 48px);
+            font-weight: 200;
+            letter-spacing: -1px;
+            font-family: 'SF Mono', 'Cascadia Code', 'Consolas', monospace;
+            text-shadow: 0 2px 8px rgba(0,0,0,0.5);
+        }
+
+        .hex-display {
+            text-align: center;
+            font-family: 'SF Mono', monospace;
+            font-size: 20px;
+            letter-spacing: 2px;
+            color: var(--text2);
+            cursor: pointer;
+            transition: color var(--transition);
+        }
+
+        .hex-display:hover {
+            color: var(--text);
+        }
+
+        /* Composition Grid */
+        .composition-section {
+            background: var(--surface);
+            border-radius: calc(var(--radius) * 4);
+            padding: 20px;
+            border: 1px solid var(--border);
+        }
+
+        .section-title {
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text2);
+            margin-bottom: 16px;
+            font-weight: 500;
+        }
+
+        .composition-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 4px;
+            aspect-ratio: 1;
+            margin-bottom: 12px;
+        }
+
+        .composition-cell {
+            border-radius: var(--radius);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: transform 0.2s ease;
+            cursor: pointer;
+            position: relative;
+            aspect-ratio: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            font-family: 'SF Mono', monospace;
+            color: rgba(255,255,255,0.8);
+            text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+        }
+
+        .composition-cell:hover {
+            transform: scale(1.05);
+            z-index: 2;
+        }
+
+        .composition-info {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            color: var(--text2);
+            letter-spacing: 0.5px;
+        }
+
+        /* Controls */
+        .controls-section {
+            background: var(--surface);
+            border-radius: calc(var(--radius) * 4);
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+
+        .control-panel {
+            padding: 20px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .control-panel:last-child {
+            border-bottom: none;
+        }
+
+        .mode-toggle {
+            display: flex;
+            gap: 2px;
+            background: var(--border);
+            border-radius: var(--radius);
+            padding: 2px;
+        }
+
+        .mode-btn {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            background: transparent;
+            color: var(--text2);
+            font-size: 12px;
+            cursor: pointer;
+            border-radius: calc(var(--radius) - 1px);
+            transition: all var(--transition);
+            letter-spacing: 0.5px;
+        }
+
+        .mode-btn.active {
+            background: var(--surface);
+            color: var(--text);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+        }
+
+        .control-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .control-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .control-label {
+            min-width: 60px;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text2);
+            font-weight: 500;
+        }
+
+        .control-value {
+            min-width: 50px;
+            text-align: right;
+            font-size: 13px;
+            font-weight: 500;
+            font-family: 'SF Mono', monospace;
+        }
+
+        input[type="range"] {
+            flex: 1;
+            -webkit-appearance: none;
+            appearance: none;
+            height: 8px;
+            background: var(--border);
+            border-radius: var(--radius);
+            outline: none;
+            cursor: pointer;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 28px;
+            height: 28px;
+            border-radius: var(--radius);
+            background: white;
+            cursor: pointer;
+            border: 2px solid var(--border);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+
+        .hue-slider {
+            background: linear-gradient(to right,
+                hsl(0, 100%, 50%),
+                hsl(60, 100%, 50%),
+                hsl(120, 100%, 50%),
+                hsl(180, 100%, 50%),
+                hsl(240, 100%, 50%),
+                hsl(300, 100%, 50%),
+                hsl(360, 100%, 50%)) !important;
+        }
+
+        /* Action Buttons */
+        .action-buttons {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .action-btn {
+            flex: 1;
+            min-width: 100px;
+            padding: 12px;
+            background: var(--border);
+            border: none;
+            color: var(--text);
+            border-radius: var(--radius);
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+            transition: all var(--transition);
+            text-transform: uppercase;
+        }
+
+        .action-btn:hover {
+            background: #3a3a3a;
+        }
+
+        .action-btn.primary {
+            background: #4a6cf7;
+        }
+
+        .action-btn.primary:hover {
+            background: #5a7cf7;
+        }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: var(--surface);
+            color: var(--text);
+            padding: 12px 24px;
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.3s ease;
+            z-index: 1000;
+            font-size: 13px;
+            letter-spacing: 0.5px;
+        }
+
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        /* Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.9);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: var(--surface);
+            border-radius: calc(var(--radius) * 4);
+            padding: 24px;
+            border: 1px solid var(--border);
+            max-width: 90vw;
+            max-height: 90vh;
+            overflow: auto;
+        }
+
+        .modal-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 4px;
+            width: min(80vw, 500px);
+            height: min(80vw, 500px);
+        }
+
+        .modal-cell {
+            border-radius: var(--radius);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'SF Mono', monospace;
+            font-size: 14px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 16px;
+            justify-content: center;
+        }
+
+        @media (max-width: 480px) {
+            .app-container {
+                padding: 12px;
+                gap: 16px;
+            }
+            
+            .action-buttons {
+                flex-direction: column;
+            }
+            
+            .action-btn {
+                min-width: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <div class="header">
+            <div class="mode-indicator">
+                <div class="mode-dot" id="modeDot"></div>
+                <span id="modeText">24h Cycle</span>
+            </div>
+            <div class="hex-display" id="hexDisplay" title="Click to copy">#000000</div>
+        </div>
+
+        <!-- Main Grid -->
+        <div class="main-grid">
+            <!-- Color Preview -->
+            <div class="color-preview-section">
+                <div class="color-circle" id="colorCircle">
+                    <div class="timer-overlay">
+                        <div class="timer" id="timer">00:00:00</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Composition Grid -->
+            <div class="composition-section">
+                <div class="section-title">Time Gradient • 16 Captures</div>
+                <div class="composition-grid" id="compositionGrid"></div>
+                <div class="composition-info">
+                    <span>Now</span>
+                    <span>15s ago</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Controls -->
+        <div class="controls-section">
+            <!-- Mode -->
+            <div class="control-panel">
+                <div class="mode-toggle">
+                    <button class="mode-btn active" data-mode="realtime">24h Cycle</button>
+                    <button class="mode-btn" data-mode="minute">60s Cycle</button>
+                </div>
+            </div>
+
+            <!-- Color Controls -->
+            <div class="control-panel">
+                <div class="control-row">
+                    <span class="control-label">HUE</span>
+                    <input type="range" min="0" max="360" value="0" class="hue-slider" id="hueSlider">
+                    <span class="control-value" id="hueValue">0°</span>
+                </div>
+                <div class="control-row">
+                    <span class="control-label">SAT</span>
+                    <input type="range" min="0" max="100" value="65" id="satSlider">
+                    <span class="control-value" id="satValue">65%</span>
+                </div>
+                <div class="control-row">
+                    <span class="control-label">LIGHT</span>
+                    <input type="range" min="0" max="100" value="40" id="lightSlider">
+                    <span class="control-value" id="lightValue">40%</span>
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="control-panel">
+                <div class="action-buttons">
+                    <button class="action-btn primary" id="captureBtn">📸 Capture Now</button>
+                    <button class="action-btn" id="viewCompositionBtn">🔍 View Large</button>
+                    <button class="action-btn" id="downloadBtn">⬇ Download PNG</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Composition Modal -->
+    <div class="modal-overlay" id="compositionModal">
+        <div class="modal-content">
+            <h3 style="margin-bottom:16px;font-weight:300;">Time Gradient Composition</h3>
+            <div class="modal-grid" id="modalGrid"></div>
+            <p style="text-align:center;margin:16px 0;font-size:12px;color:var(--text2);">
+                16 color samples captured at 1-second intervals
+            </p>
+            <div class="modal-actions">
+                <button class="action-btn primary" id="modalDownloadBtn">Download PNG</button>
+                <button class="action-btn" id="modalCloseBtn">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
+
+    <script>
+        const STATE = {
+            mode: 'realtime',
+            baseHue: 0,
+            manualHueOffset: 0,
+            saturation: 65,
+            lightness: 40,
+            colorHistory: [],
+            maxHistory: 16,
+            captureInterval: 1000, // 1 second for 16-second span
+        };
+
+        const ELS = {
+            colorCircle: document.getElementById('colorCircle'),
+            timer: document.getElementById('timer'),
+            hexDisplay: document.getElementById('hexDisplay'),
+            hueSlider: document.getElementById('hueSlider'),
+            hueValue: document.getElementById('hueValue'),
+            satSlider: document.getElementById('satSlider'),
+            satValue: document.getElementById('satValue'),
+            lightSlider: document.getElementById('lightSlider'),
+            lightValue: document.getElementById('lightValue'),
+            compositionGrid: document.getElementById('compositionGrid'),
+            modeDot: document.getElementById('modeDot'),
+            modeText: document.getElementById('modeText'),
+            toast: document.getElementById('toast'),
+            modal: document.getElementById('compositionModal'),
+            modalGrid: document.getElementById('modalGrid'),
+        };
+
+        // ===== UTILITY FUNCTIONS =====
+        function hslToHex(h, s, l) {
+            s /= 100; l /= 100;
+            const a = s * Math.min(l, 1 - l);
+            const f = n => {
+                const k = (n + h / 30) % 12;
+                const color = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+                return Math.round(255 * color).toString(16).padStart(2, '0');
+            };
+            return `#${f(0)}${f(8)}${f(4)}`.toUpperCase();
+        }
+
+        function getCurrentColor() {
+            const h = ((STATE.baseHue + STATE.manualHueOffset) % 360 + 360) % 360;
+            return {
+                h, s: STATE.saturation, l: STATE.lightness,
+                hex: hslToHex(h, STATE.saturation, STATE.lightness),
+                hslString: `hsl(${h}, ${STATE.saturation}%, ${STATE.lightness}%)`
+            };
+        }
+
+        function showToast(msg) {
+            ELS.toast.textContent = msg;
+            ELS.toast.classList.add('show');
+            setTimeout(() => ELS.toast.classList.remove('show'), 2000);
+        }
+
+        // ===== COLOR HISTORY MANAGEMENT =====
+        function captureColor() {
+            const color = getCurrentColor();
+            STATE.colorHistory.unshift({
+                ...color,
+                timestamp: Date.now(),
+                timeString: new Date().toLocaleTimeString('en-US', { hour12: false })
+            });
+            
+            if (STATE.colorHistory.length > STATE.maxHistory) {
+                STATE.colorHistory = STATE.colorHistory.slice(0, STATE.maxHistory);
+            }
+            
+            updateCompositionGrid();
+        }
+
+        function updateCompositionGrid() {
+            // Update small preview grid
+            ELS.compositionGrid.innerHTML = '';
+            
+            for (let i = 0; i < STATE.maxHistory; i++) {
+                const cell = document.createElement('div');
+                cell.className = 'composition-cell';
+                
+                if (i < STATE.colorHistory.length) {
+                    const color = STATE.colorHistory[i];
+                    cell.style.backgroundColor = color.hex;
+                    cell.textContent = color.hex;
+                    cell.title = `${color.hex}\n${color.timeString}`;
+                } else {
+                    cell.style.backgroundColor = 'rgba(255,255,255,0.03)';
+                }
+                
+                ELS.compositionGrid.appendChild(cell);
+            }
+        }
+
+        function updateModalGrid() {
+            ELS.modalGrid.innerHTML = '';
+            
+            for (let i = 0; i < STATE.maxHistory; i++) {
+                const cell = document.createElement('div');
+                cell.className = 'modal-cell';
+                
+                if (i < STATE.colorHistory.length) {
+                    const color = STATE.colorHistory[i];
+                    cell.style.backgroundColor = color.hex;
+                    cell.textContent = color.hex;
+                    cell.title = `${color.hex}\n${color.timeString}`;
+                } else {
+                    cell.style.backgroundColor = 'rgba(255,255,255,0.03)';
+                }
+                
+                ELS.modalGrid.appendChild(cell);
+            }
+        }
+
+        // ===== UI UPDATES =====
+        function updateUI() {
+            const color = getCurrentColor();
+            
+            // Update color circle
+            ELS.colorCircle.style.backgroundColor = color.hslString;
+            
+            // Update hex
+            ELS.hexDisplay.textContent = color.hex;
+            
+            // Update sliders
+            ELS.hueSlider.value = color.h;
+            ELS.hueValue.textContent = `${Math.round(color.h)}°`;
+            ELS.satSlider.value = STATE.saturation;
+            ELS.satValue.textContent = `${Math.round(STATE.saturation)}%`;
+            ELS.lightSlider.value = STATE.lightness;
+            ELS.lightValue.textContent = `${Math.round(STATE.lightness)}%`;
+            
+            // Update body background
+            document.body.style.backgroundColor = `hsl(${color.h}, ${Math.min(STATE.saturation, 15)}%, ${Math.max(3, STATE.lightness - 35)}%)`;
+            
+            // Update mode indicator dot
+            ELS.modeDot.style.backgroundColor = color.hslString;
+        }
+
+        function updateTimer() {
+            const now = new Date();
+            ELS.timer.textContent = now.toLocaleTimeString('en-US', { 
+                hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' 
+            });
+            
+            // Calculate base hue
+            if (STATE.mode === 'realtime') {
+                const ms = (now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds()) * 1000 + now.getMilliseconds();
+                STATE.baseHue = (ms / 86400000) * 360;
+            } else {
+                const ms = (now.getSeconds() * 1000) + now.getMilliseconds();
+                STATE.baseHue = (ms / 60000) * 360;
+            }
+        }
+
+        // ===== EVENT HANDLERS =====
+        function handleHueChange(e) {
+            const rect = ELS.hueSlider.getBoundingClientRect();
+            const x = (e.clientX || (e.touches && e.touches[0].clientX)) - rect.left;
+            const percentage = Math.max(0, Math.min(1, x / rect.width));
+            const hue = percentage * 360;
+            
+            STATE.manualHueOffset = hue - STATE.baseHue;
+            if (STATE.manualHueOffset > 180) STATE.manualHueOffset -= 360;
+            if (STATE.manualHueOffset < -180) STATE.manualHueOffset += 360;
+            
+            updateUI();
+        }
+
+        function downloadComposition() {
+            const canvas = document.createElement('canvas');
+            const size = 800;
+            const cellSize = size / 4;
+            canvas.width = size;
+            canvas.height = size + 60; // Extra space for info
+            const ctx = canvas.getContext('2d');
+            
+            // Draw 4x4 grid
+            for (let row = 0; row < 4; row++) {
+                for (let col = 0; col < 4; col++) {
+                    const index = row * 4 + col;
+                    const x = col * cellSize;
+                    const y = row * cellSize;
+                    
+                    if (index < STATE.colorHistory.length) {
+                        ctx.fillStyle = STATE.colorHistory[index].hex;
+                    } else {
+                        ctx.fillStyle = '#333';
+                    }
+                    
+                    ctx.fillRect(x, y, cellSize, cellSize);
+                    ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+                    ctx.lineWidth = 1;
+                    ctx.strokeRect(x, y, cellSize, cellSize);
+                    
+                    // Add hex text
+                    if (index < STATE.colorHistory.length) {
+                        const color = STATE.colorHistory[index];
+                        ctx.fillStyle = color.l > 50 ? '#000' : '#fff';
+                        ctx.font = 'bold 18px "SF Mono", monospace';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillText(color.hex, x + cellSize/2, y + cellSize/2);
+                        ctx.font = '12px "SF Mono", monospace';
+                        ctx.fillText(color.timeString, x + cellSize/2, y + cellSize/2 + 24);
+                    }
+                }
+            }
+            
+            // Add info footer
+            ctx.fillStyle = '#fff';
+            ctx.font = '14px -apple-system, sans-serif';
+            ctx.textAlign = 'left';
+            ctx.fillText('TimeMe - Color Capture Timer', 10, size + 25);
+            ctx.fillText(`Generated: ${new Date().toLocaleString()}`, 10, size + 45);
+            
+            // Download
+            const link = document.createElement('a');
+            link.download = `timeme-composition-${Date.now()}.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+            showToast('Composition downloaded!');
+        }
+
+        // ===== ANIMATION LOOP =====
+        function animate() {
+            updateTimer();
+            updateUI();
+            requestAnimationFrame(animate);
+        }
+
+        // ===== INITIALIZATION =====
+        function init() {
+            // Create empty composition grid
+            for (let i = 0; i < STATE.maxHistory; i++) {
+                const cell = document.createElement('div');
+                cell.className = 'composition-cell';
+                cell.style.backgroundColor = 'rgba(255,255,255,0.03)';
+                ELS.compositionGrid.appendChild(cell);
+            }
+            
+            // Event listeners
+            ELS.hueSlider.addEventListener('input', handleHueChange);
+            ELS.hueSlider.addEventListener('touchstart', (e) => { e.preventDefault(); handleHueChange(e); });
+            ELS.hueSlider.addEventListener('touchmove', (e) => { e.preventDefault(); handleHueChange(e); });
+            
+            ELS.satSlider.addEventListener('input', (e) => {
+                STATE.saturation = parseInt(e.target.value);
+                updateUI();
+            });
+            
+            ELS.lightSlider.addEventListener('input', (e) => {
+                STATE.lightness = parseInt(e.target.value);
+                updateUI();
+            });
+            
+            ELS.hexDisplay.addEventListener('click', () => {
+                navigator.clipboard.writeText(getCurrentColor().hex);
+                showToast('Color copied!');
+            });
+            
+            // Mode buttons
+            document.querySelectorAll('.mode-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    STATE.mode = btn.dataset.mode;
+                    STATE.manualHueOffset = 0;
+                    document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    ELS.modeText.textContent = STATE.mode === 'realtime' ? '24h Cycle' : '60s Cycle';
+                    showToast(`Switched to ${STATE.mode === 'realtime' ? '24-hour' : '60-second'} cycle`);
+                });
+            });
+            
+            // Capture button
+            document.getElementById('captureBtn').addEventListener('click', () => {
+                captureColor();
+                showToast('Color captured!');
+            });
+            
+            // View composition
+            document.getElementById('viewCompositionBtn').addEventListener('click', () => {
+                updateModalGrid();
+                ELS.modal.classList.add('active');
+            });
+            
+            // Download button
+            document.getElementById('downloadBtn').addEventListener('click', downloadComposition);
+            document.getElementById('modalDownloadBtn').addEventListener('click', () => {
+                downloadComposition();
+                ELS.modal.classList.remove('active');
+            });
+            
+            // Close modal
+            document.getElementById('modalCloseBtn').addEventListener('click', () => {
+                ELS.modal.classList.remove('active');
+            });
+            
+            ELS.modal.addEventListener('click', (e) => {
+                if (e.target === ELS.modal) ELS.modal.classList.remove('active');
+            });
+            
+            // Start capture interval
+            setInterval(captureColor, STATE.captureInterval);
+            
+            // Start animation
+            animate();
+        }
+        
+        init();
+    </script>
+</body>
+</html>
