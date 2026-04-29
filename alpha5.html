@@ -1,0 +1,857 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TimeMe Alpha 4 - Complete Color Timer</title>
+    <style>
+        :root {
+            --bg: #0a0a0a;
+            --surface: #141414;
+            --surface2: #1e1e1e;
+            --text: #e0e0e0;
+            --text2: #999;
+            --accent: #ff6b6b;
+            --border: #2a2a2a;
+            --radius: 2px;
+            --transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            overflow-x: hidden;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+            -webkit-user-select: none;
+            transition: background-color 0.8s ease;
+        }
+
+        .app-container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        /* Canvas Container */
+        .visualization-container {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 1;
+            max-height: 400px;
+            border-radius: calc(var(--radius) * 4);
+            overflow: hidden;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+        }
+
+        canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        .canvas-overlay {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            display: flex;
+            gap: 8px;
+            z-index: 10;
+        }
+
+        .viz-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: var(--radius);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: rgba(0, 0, 0, 0.6);
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(10px);
+            transition: all var(--transition);
+            font-size: 16px;
+        }
+
+        .viz-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            border-color: rgba(255, 255, 255, 0.4);
+        }
+
+        .viz-btn:active {
+            transform: scale(0.95);
+        }
+
+        /* Timer Display */
+        .timer-section {
+            text-align: center;
+            padding: 8px 0;
+        }
+
+        .timer {
+            font-size: clamp(48px, 8vw, 64px);
+            font-weight: 200;
+            letter-spacing: -2px;
+            font-family: 'SF Mono', 'Cascadia Code', 'Consolas', monospace;
+            font-variant-numeric: tabular-nums;
+            line-height: 1;
+        }
+
+        .date-label {
+            font-size: 13px;
+            color: var(--text2);
+            margin-top: 8px;
+            letter-spacing: 0.5px;
+            font-weight: 400;
+        }
+
+        .hex-display {
+            text-align: center;
+            font-family: 'SF Mono', 'Cascadia Code', 'Consolas', monospace;
+            font-size: 24px;
+            letter-spacing: 2px;
+            color: var(--text2);
+            cursor: pointer;
+            padding: 8px;
+            transition: color var(--transition);
+            position: relative;
+        }
+
+        .hex-display:hover {
+            color: var(--text);
+        }
+
+        .copied-tooltip {
+            position: absolute;
+            top: -25px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--surface2);
+            padding: 4px 12px;
+            border-radius: var(--radius);
+            font-size: 12px;
+            opacity: 0;
+            transition: opacity var(--transition);
+            pointer-events: none;
+            border: 1px solid var(--border);
+        }
+
+        .copied-tooltip.show {
+            opacity: 1;
+        }
+
+        /* Controls Panel */
+        .controls-panel {
+            background: var(--surface);
+            border-radius: calc(var(--radius) * 4);
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+
+        .panel-section {
+            padding: 20px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .panel-section:last-child {
+            border-bottom: none;
+        }
+
+        .mode-selector {
+            display: flex;
+            gap: 2px;
+            background: var(--border);
+            border-radius: var(--radius);
+            padding: 2px;
+        }
+
+        .mode-btn {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            background: transparent;
+            color: var(--text2);
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            border-radius: calc(var(--radius) - 1px);
+            transition: all var(--transition);
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+
+        .mode-btn.active {
+            background: var(--surface2);
+            color: var(--text);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+        }
+
+        .control-row {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+
+        .control-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .control-label {
+            min-width: 70px;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text2);
+            font-weight: 500;
+        }
+
+        .control-value {
+            min-width: 45px;
+            text-align: right;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text);
+            font-family: 'SF Mono', 'Cascadia Code', 'Consolas', monospace;
+        }
+
+        input[type="range"] {
+            flex: 1;
+            -webkit-appearance: none;
+            appearance: none;
+            height: 8px;
+            background: var(--border);
+            border-radius: var(--radius);
+            outline: none;
+            cursor: pointer;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 28px;
+            height: 28px;
+            border-radius: var(--radius);
+            background: white;
+            cursor: pointer;
+            border: 2px solid var(--border);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            transition: transform 0.1s ease;
+        }
+
+        input[type="range"]::-webkit-slider-thumb:active {
+            transform: scale(1.1);
+        }
+
+        .hue-slider {
+            background: linear-gradient(to right,
+                    hsl(0, 100%, 50%),
+                    hsl(60, 100%, 50%),
+                    hsl(120, 100%, 50%),
+                    hsl(180, 100%, 50%),
+                    hsl(240, 100%, 50%),
+                    hsl(300, 100%, 50%),
+                    hsl(360, 100%, 50%)) !important;
+        }
+
+        .visualization-types {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .viz-type-btn {
+            padding: 8px 12px;
+            border: 1px solid var(--border);
+            background: transparent;
+            color: var(--text2);
+            border-radius: var(--radius);
+            cursor: pointer;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            transition: all var(--transition);
+            flex: 1;
+            min-width: 60px;
+            text-align: center;
+        }
+
+        .viz-type-btn.active {
+            background: var(--surface2);
+            color: var(--text);
+            border-color: var(--text2);
+        }
+
+        /* Export section */
+        .export-section {
+            display: flex;
+            gap: 8px;
+        }
+
+        .export-btn {
+            flex: 1;
+            padding: 12px;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            color: var(--text);
+            border-radius: var(--radius);
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+            transition: all var(--transition);
+            text-transform: uppercase;
+        }
+
+        .export-btn:hover {
+            background: var(--border);
+        }
+
+        .export-btn:active {
+            transform: scale(0.98);
+        }
+
+        @media (max-width: 480px) {
+            .app-container {
+                padding: 12px;
+                gap: 16px;
+            }
+
+            .visualization-container {
+                max-height: 300px;
+            }
+
+            .control-row {
+                gap: 8px;
+            }
+
+            .control-label {
+                min-width: 55px;
+                font-size: 10px;
+            }
+
+            input[type="range"] {
+                height: 12px;
+            }
+
+            input[type="range"]::-webkit-slider-thumb {
+                width: 32px;
+                height: 32px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Visualization Canvas -->
+        <div class="visualization-container">
+            <canvas id="visualization"></canvas>
+            <div class="canvas-overlay">
+                <button class="viz-btn" id="downloadBtn" title="Download Image">⬇</button>
+                <button class="viz-btn" id="fullscreenBtn" title="Fullscreen">⛶</button>
+            </div>
+        </div>
+
+        <!-- Timer -->
+        <div class="timer-section">
+            <div class="timer" id="timer">00:00:00</div>
+            <div class="date-label" id="dateLabel">Loading...</div>
+        </div>
+
+        <!-- Hex Display -->
+        <div class="hex-display" id="hexDisplay">
+            #000000
+            <span class="copied-tooltip" id="copiedTooltip">Copied!</span>
+        </div>
+
+        <!-- Controls -->
+        <div class="controls-panel">
+            <!-- Mode Selection -->
+            <div class="panel-section">
+                <div class="mode-selector">
+                    <button class="mode-btn active" data-mode="realtime">24h Cycle</button>
+                    <button class="mode-btn" data-mode="minute">1min Cycle</button>
+                    <button class="mode-btn" data-mode="custom">Custom Speed</button>
+                </div>
+            </div>
+
+            <!-- Color Controls -->
+            <div class="panel-section">
+                <div class="control-row">
+                    <span class="control-label">HUE</span>
+                    <input type="range" min="0" max="360" value="0" class="hue-slider" id="hueSlider">
+                    <span class="control-value" id="hueValue">0°</span>
+                </div>
+                <div class="control-row">
+                    <span class="control-label">SAT</span>
+                    <input type="range" min="0" max="100" value="65" id="satSlider">
+                    <span class="control-value" id="satValue">65%</span>
+                </div>
+                <div class="control-row">
+                    <span class="control-label">LIGHT</span>
+                    <input type="range" min="0" max="100" value="40" id="lightSlider">
+                    <span class="control-value" id="lightValue">40%</span>
+                </div>
+            </div>
+
+            <!-- Visualization Types -->
+            <div class="panel-section">
+                <div class="visualization-types">
+                    <button class="viz-type-btn active" data-viz="gradient">Gradient</button>
+                    <button class="viz-type-btn" data-viz="waves">Waves</button>
+                    <button class="viz-type-btn" data-viz="particles">Particles</button>
+                    <button class="viz-type-btn" data-viz="geometric">Geometric</button>
+                </div>
+            </div>
+
+            <!-- Export -->
+            <div class="panel-section">
+                <div class="export-section">
+                    <button class="export-btn" id="exportPNG">Export PNG</button>
+                    <button class="export-btn" id="exportSVG">Export SVG</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ============ STATE MANAGEMENT ============
+        const state = {
+            mode: 'realtime',
+            baseHue: 0,
+            manualHueOffset: 0,
+            saturation: 65,
+            lightness: 40,
+            vizType: 'gradient',
+            customSpeed: 1,
+            time: new Date(),
+            particles: [],
+            wavePhase: 0,
+        };
+
+        // ============ DOM ELEMENTS ============
+        const els = {
+            canvas: document.getElementById('visualization'),
+            timer: document.getElementById('timer'),
+            dateLabel: document.getElementById('dateLabel'),
+            hexDisplay: document.getElementById('hexDisplay'),
+            copiedTooltip: document.getElementById('copiedTooltip'),
+            hueSlider: document.getElementById('hueSlider'),
+            hueValue: document.getElementById('hueValue'),
+            satSlider: document.getElementById('satSlider'),
+            satValue: document.getElementById('satValue'),
+            lightSlider: document.getElementById('lightSlider'),
+            lightValue: document.getElementById('lightValue'),
+            downloadBtn: document.getElementById('downloadBtn'),
+            fullscreenBtn: document.getElementById('fullscreenBtn'),
+            exportPNG: document.getElementById('exportPNG'),
+            exportSVG: document.getElementById('exportSVG'),
+        };
+
+        const ctx = els.canvas.getContext('2d');
+
+        // ============ COLOR UTILITIES ============
+        function hslToHex(h, s, l) {
+            s /= 100;
+            l /= 100;
+            const a = s * Math.min(l, 1 - l);
+            const f = n => {
+                const k = (n + h / 30) % 12;
+                const color = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+                return Math.round(255 * color).toString(16).padStart(2, '0');
+            };
+            return `#${f(0)}${f(8)}${f(4)}`.toUpperCase();
+        }
+
+        function getCurrentHue() {
+            return ((state.baseHue + state.manualHueOffset) % 360 + 360) % 360;
+        }
+
+        function getCurrentColor() {
+            const h = getCurrentHue();
+            return {
+                h,
+                s: state.saturation,
+                l: state.lightness,
+                hex: hslToHex(h, state.saturation, state.lightness),
+                hslString: `hsl(${h}, ${state.saturation}%, ${state.lightness}%)`
+            };
+        }
+
+        // ============ CANVAS VISUALIZATION ============
+        function resizeCanvas() {
+            const container = els.canvas.parentElement;
+            const rect = container.getBoundingClientRect();
+            els.canvas.width = rect.width * window.devicePixelRatio;
+            els.canvas.height = rect.height * window.devicePixelRatio;
+            els.canvas.style.width = rect.width + 'px';
+            els.canvas.style.height = rect.height + 'px';
+            ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+        }
+
+        function drawGradientVisualization(color) {
+            const w = els.canvas.width / window.devicePixelRatio;
+            const h = els.canvas.height / window.devicePixelRatio;
+
+            // Main radial gradient
+            const gradient = ctx.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w * 0.7);
+            gradient.addColorStop(0, `hsl(${color.h}, ${color.s}%, ${Math.min(color.l + 20, 90)}%)`);
+            gradient.addColorStop(0.5, color.hslString);
+            gradient.addColorStop(1, `hsl(${(color.h + 30) % 360}, ${Math.max(color.s - 20, 0)}%, ${Math.max(color.l - 20, 5)}%)`);
+
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, w, h);
+
+            // Overlay pattern
+            ctx.strokeStyle = `hsla(${(color.h + 180) % 360}, 50%, 70%, 0.1)`;
+            ctx.lineWidth = 1;
+            const spacing = 40;
+            for (let i = 0; i < w + h; i += spacing) {
+                ctx.beginPath();
+                ctx.moveTo(i, 0);
+                ctx.lineTo(i - h, h);
+                ctx.stroke();
+            }
+        }
+
+        function drawWavesVisualization(color) {
+            const w = els.canvas.width / window.devicePixelRatio;
+            const h = els.canvas.height / window.devicePixelRatio;
+
+            // Background
+            ctx.fillStyle = `hsl(${color.h}, 20%, 5%)`;
+            ctx.fillRect(0, 0, w, h);
+
+            // Waves
+            const time = state.wavePhase;
+            for (let i = 0; i < 5; i++) {
+                ctx.beginPath();
+                ctx.strokeStyle = `hsla(${color.h}, ${color.s - i * 10}%, ${color.l + i * 10}%, ${0.8 - i * 0.15})`;
+                ctx.lineWidth = 3;
+
+                for (let x = 0; x < w; x += 2) {
+                    const y = h / 2 + Math.sin(x * 0.02 + time + i) * 80 +
+                        Math.cos(x * 0.01 + time * 0.7 + i * 2) * 40;
+
+                    if (x === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                }
+                ctx.stroke();
+            }
+        }
+
+        function drawParticlesVisualization(color) {
+            const w = els.canvas.width / window.devicePixelRatio;
+            const h = els.canvas.height / window.devicePixelRatio;
+
+            // Dark background
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+            ctx.fillRect(0, 0, w, h);
+
+            // Update particles
+            if (state.particles.length < 50 || Math.random() < 0.1) {
+                state.particles.push({
+                    x: Math.random() * w,
+                    y: Math.random() * h,
+                    vx: (Math.random() - 0.5) * 2,
+                    vy: (Math.random() - 0.5) * 2,
+                    life: 1,
+                    hue: color.h + (Math.random() - 0.5) * 30,
+                });
+            }
+
+            // Draw and update particles
+            state.particles = state.particles.filter(p => p.life > 0);
+            state.particles.forEach(p => {
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
+                ctx.fillStyle = `hsla(${p.hue}, ${color.s}%, ${color.l}%, ${p.life})`;
+                ctx.fill();
+
+                p.x += p.vx;
+                p.y += p.vy;
+                p.life -= 0.005;
+
+                // Wrap around edges
+                if (p.x < 0) p.x = w;
+                if (p.x > w) p.x = 0;
+                if (p.y < 0) p.y = h;
+                if (p.y > h) p.y = 0;
+            });
+        }
+
+        function drawGeometricVisualization(color) {
+            const w = els.canvas.width / window.devicePixelRatio;
+            const h = els.canvas.height / window.devicePixelRatio;
+            const time = state.wavePhase;
+
+            // Background
+            ctx.fillStyle = `hsl(${(color.h + 180) % 360}, 10%, 2%)`;
+            ctx.fillRect(0, 0, w, h);
+
+            // Geometric shapes
+            const shapes = 6;
+            for (let i = 0; i < shapes; i++) {
+                const angle = (time * 0.5 + (Math.PI * 2 * i) / shapes);
+                const radius = 100 + Math.sin(time + i) * 20;
+                const x = w / 2 + Math.cos(angle) * radius;
+                const y = h / 2 + Math.sin(angle) * radius;
+
+                ctx.save();
+                ctx.translate(x, y);
+                ctx.rotate(time + i);
+
+                ctx.strokeStyle = `hsla(${color.h}, ${color.s}%, ${color.l + i * 10}%, ${0.8 - i * 0.1})`;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+
+                // Draw polygon
+                const sides = i + 3;
+                const size = 30 + i * 10;
+                for (let j = 0; j < sides; j++) {
+                    const a = (Math.PI * 2 * j) / sides;
+                    const px = Math.cos(a) * size;
+                    const py = Math.sin(a) * size;
+                    if (j === 0) ctx.moveTo(px, py);
+                    else ctx.lineTo(px, py);
+                }
+                ctx.closePath();
+                ctx.stroke();
+                ctx.restore();
+            }
+
+            // Center circle
+            const centerGrad = ctx.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, 60);
+            centerGrad.addColorStop(0, 'rgba(255,255,255,0.1)');
+            centerGrad.addColorStop(1, 'rgba(255,255,255,0)');
+            ctx.fillStyle = centerGrad;
+            ctx.beginPath();
+            ctx.arc(w / 2, h / 2, 60, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        function drawVisualization() {
+            const color = getCurrentColor();
+            ctx.clearRect(0, 0, els.canvas.width, els.canvas.height);
+
+            switch (state.vizType) {
+                case 'gradient':
+                    drawGradientVisualization(color);
+                    break;
+                case 'waves':
+                    drawWavesVisualization(color);
+                    break;
+                case 'particles':
+                    drawParticlesVisualization(color);
+                    break;
+                case 'geometric':
+                    drawGeometricVisualization(color);
+                    break;
+            }
+        }
+
+        // ============ UI UPDATES ============
+        function updateUI() {
+            const color = getCurrentColor();
+
+            // Update sliders
+            els.hueSlider.value = color.h;
+            els.hueValue.textContent = `${Math.round(color.h)}°`;
+            els.satSlider.value = state.saturation;
+            els.satValue.textContent = `${Math.round(state.saturation)}%`;
+            els.lightSlider.value = state.lightness;
+            els.lightValue.textContent = `${Math.round(state.lightness)}%`;
+
+            // Update hex
+            els.hexDisplay.childNodes[0].textContent = color.hex;
+
+            // Update body background
+            document.body.style.backgroundColor = `hsl(${color.h}, ${Math.min(state.saturation, 20)}%, ${Math.max(3, state.lightness - 35)}%)`;
+        }
+
+        function updateTimer() {
+            state.time = new Date();
+            const h = state.time.getHours().toString().padStart(2, '0');
+            const m = state.time.getMinutes().toString().padStart(2, '0');
+            const s = state.time.getSeconds().toString().padStart(2, '0');
+            els.timer.textContent = `${h}:${m}:${s}`;
+
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            els.dateLabel.textContent = state.time.toLocaleDateString('en-US', options);
+
+            // Update base hue based on mode
+            if (state.mode === 'realtime') {
+                const ms = (state.time.getHours() * 3600 + state.time.getMinutes() * 60 + state.time.getSeconds()) *
+                    1000 + state.time.getMilliseconds();
+                state.baseHue = (ms / 86400000) * 360;
+            } else if (state.mode === 'minute') {
+                const ms = (state.time.getSeconds() * 1000) + state.time.getMilliseconds();
+                state.baseHue = (ms / 60000) * 360;
+            } else if (state.mode === 'custom') {
+                state.baseHue = (state.baseHue + 0.1 * state.customSpeed) % 360;
+            }
+
+            state.wavePhase += 0.02;
+        }
+
+        // ============ EVENT HANDLERS ============
+        function handleHueChange(e) {
+            const rect = els.hueSlider.getBoundingClientRect();
+            const x = (e.clientX || (e.touches && e.touches[0].clientX)) - rect.left;
+            const percentage = Math.max(0, Math.min(1, x / rect.width));
+            const hue = percentage * 360;
+
+            state.manualHueOffset = hue - state.baseHue;
+            if (state.manualHueOffset > 180) state.manualHueOffset -= 360;
+            if (state.manualHueOffset < -180) state.manualHueOffset += 360;
+
+            updateUI();
+        }
+
+        function handleModeSwitch(mode) {
+            state.mode = mode;
+            state.manualHueOffset = 0;
+
+            document.querySelectorAll('.mode-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.mode === mode);
+            });
+
+            if (mode === 'custom') {
+                state.customSpeed = prompt('Enter cycle speed (0.1-10x):', state.customSpeed) || 1;
+                state.customSpeed = Math.max(0.1, Math.min(10, parseFloat(state.customSpeed)));
+            }
+        }
+
+        function handleVizSwitch(type) {
+            state.vizType = type;
+            if (type === 'particles') state.particles = [];
+
+            document.querySelectorAll('.viz-type-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.viz === type);
+            });
+        }
+
+        function downloadVisualization(format) {
+            if (format === 'png') {
+                const link = document.createElement('a');
+                link.download = `timeme-${Date.now()}.png`;
+                link.href = els.canvas.toDataURL('image/png');
+                link.click();
+            } else if (format === 'svg') {
+                const color = getCurrentColor();
+                const svg = `
+                    <svg xmlns="http://www.w3.org/2000/svg" width="800" height="800">
+                        <defs>
+                            <radialGradient id="grad" cx="50%" cy="50%">
+                                <stop offset="0%" stop-color="hsl(${color.h}, ${color.s}%, ${Math.min(color.l + 30, 95)}%)"/>
+                                <stop offset="100%" stop-color="hsl(${(color.h + 40) % 360}, ${Math.max(color.s - 30, 0)}%, ${Math.max(color.l - 30, 5)}%)"/>
+                            </radialGradient>
+                        </defs>
+                        <rect width="100%" height="100%" fill="url(#grad)"/>
+                        <text x="50%" y="50%" text-anchor="middle" fill="white" font-family="monospace" font-size="48">
+                            ${color.hex}
+                        </text>
+                    </svg>`;
+
+                const blob = new Blob([svg], { type: 'image/svg+xml' });
+                const link = document.createElement('a');
+                link.download = `timeme-${Date.now()}.svg`;
+                link.href = URL.createObjectURL(blob);
+                link.click();
+                URL.revokeObjectURL(link.href);
+            }
+        }
+
+        function copyHexToClipboard() {
+            const hex = els.hexDisplay.childNodes[0].textContent.trim();
+            navigator.clipboard.writeText(hex).then(() => {
+                els.copiedTooltip.classList.add('show');
+                setTimeout(() => els.copiedTooltip.classList.remove('show'), 1500);
+            });
+        }
+
+        function toggleFullscreen() {
+            const container = els.canvas.parentElement;
+            if (!document.fullscreenElement) {
+                container.requestFullscreen().catch(err => console.log(err));
+            } else {
+                document.exitFullscreen();
+            }
+        }
+
+        // ============ ANIMATION LOOP ============
+        function animate() {
+            updateTimer();
+            updateUI();
+            drawVisualization();
+            requestAnimationFrame(animate);
+        }
+
+        // ============ INITIALIZATION ============
+        function init() {
+            resizeCanvas();
+            window.addEventListener('resize', resizeCanvas);
+
+            // Slider events
+            els.hueSlider.addEventListener('input', handleHueChange);
+            els.hueSlider.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                handleHueChange(e);
+            });
+            els.hueSlider.addEventListener('touchmove', (e) => {
+                e.preventDefault();
+                handleHueChange(e);
+            });
+
+            els.satSlider.addEventListener('input', (e) => {
+                state.saturation = parseInt(e.target.value);
+                updateUI();
+            });
+
+            els.lightSlider.addEventListener('input', (e) => {
+                state.lightness = parseInt(e.target.value);
+                updateUI();
+            });
+
+            // Mode buttons
+            document.querySelectorAll('.mode-btn').forEach(btn => {
+                btn.addEventListener('click', () => handleModeSwitch(btn.dataset.mode));
+            });
+
+            // Visualization type buttons
+            document.querySelectorAll('.viz-type-btn').forEach(btn => {
+                btn.addEventListener('click', () => handleVizSwitch(btn.dataset.viz));
+            });
+
+            // Export buttons
+            els.exportPNG.addEventListener('click', () => downloadVisualization('png'));
+            els.exportSVG.addEventListener('click', () => downloadVisualization('svg'));
+            els.downloadBtn.addEventListener('click', () => downloadVisualization('png'));
+
+            // Other buttons
+            els.hexDisplay.addEventListener('click', copyHexToClipboard);
+            els.fullscreenBtn.addEventListener('click', toggleFullscreen);
+
+            // Start animation
+            animate();
+        }
+
+        init();
+    </script>
+</body>
+</html>
