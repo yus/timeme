@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TimeMe - Floating Color Timer</title>
+    <style>
+        :root {
+            --bg: #0a0a0a;
+            --surface: #1a1a1a;
+            --text: #e0e0e0;
+            --text-secondary: #888;
+            --accent: #ff6b6b;
+            --border: #2a2a2a;
+            --radius: 2px;
+            --transition: 0.2s ease;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.5s ease;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 480px;
+            padding: 20px;
+            margin: 0 auto;
+        }
+
+        /* Color Preview Circle */
+        .color-preview {
+            width: min(200px, 50vw);
+            height: min(200px, 50vw);
+            border-radius: 50%;
+            margin: 0 auto 32px;
+            background: hsl(0, 65%, 40%);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            transition: background-color 0.8s ease, box-shadow 0.5s ease;
+            position: relative;
+        }
+
+        .color-preview::after {
+            content: '';
+            position: absolute;
+            inset: -4px;
+            border-radius: 50%;
+            background: transparent;
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            pointer-events: none;
+        }
+
+        /* Timer Display */
+        .timer-section {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+
+        .timer {
+            font-size: clamp(48px, 10vw, 72px);
+            font-weight: 300;
+            letter-spacing: -2px;
+            font-variant-numeric: tabular-nums;
+            font-family: 'SF Mono', 'Cascadia Code', 'Consolas', monospace;
+            color: var(--text);
+            text-shadow: 0 0 40px rgba(255, 255, 255, 0.1);
+        }
+
+        .date-label {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-top: 8px;
+            letter-spacing: 0.5px;
+        }
+
+        /* Hex Display */
+        .hex-display {
+            text-align: center;
+            margin-bottom: 24px;
+            font-size: 18px;
+            font-weight: 500;
+            letter-spacing: 1px;
+            font-family: 'SF Mono', 'Cascadia Code', 'Consolas', monospace;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: color var(--transition);
+            position: relative;
+        }
+
+        .hex-display:hover {
+            color: var(--text);
+        }
+
+        .copied-tooltip {
+            position: absolute;
+            top: -30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--surface);
+            color: var(--text);
+            padding: 4px 12px;
+            border-radius: var(--radius);
+            font-size: 12px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity var(--transition);
+            border: 1px solid var(--border);
+        }
+
+        .copied-tooltip.show {
+            opacity: 1;
+        }
+
+        /* Controls Card */
+        .controls {
+            background: var(--surface);
+            border-radius: calc(var(--radius) * 4);
+            padding: 24px;
+            border: 1px solid var(--border);
+            backdrop-filter: blur(20px);
+        }
+
+        .control-group {
+            margin-bottom: 20px;
+        }
+
+        .control-group:last-child {
+            margin-bottom: 0;
+        }
+
+        .control-label {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .control-value {
+            font-weight: 600;
+            color: var(--text);
+            font-size: 14px;
+        }
+
+        /* Sliders */
+        input[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100%;
+            height: 8px;
+            background: var(--border);
+            border-radius: var(--radius);
+            outline: none;
+            cursor: pointer;
+            transition: background var(--transition);
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 28px;
+            height: 28px;
+            border-radius: var(--radius);
+            background: white;
+            cursor: pointer;
+            border: 2px solid var(--border);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            transition: transform var(--transition), box-shadow var(--transition);
+        }
+
+        input[type="range"]::-webkit-slider-thumb:active {
+            transform: scale(1.1);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 28px;
+            height: 28px;
+            border-radius: var(--radius);
+            background: white;
+            cursor: pointer;
+            border: 2px solid var(--border);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Hue Slider Special Styling */
+        .hue-slider {
+            background: linear-gradient(to right,
+                    hsl(0, 100%, 50%),
+                    hsl(60, 100%, 50%),
+                    hsl(120, 100%, 50%),
+                    hsl(180, 100%, 50%),
+                    hsl(240, 100%, 50%),
+                    hsl(300, 100%, 50%),
+                    hsl(360, 100%, 50%)) !important;
+            height: 10px !important;
+        }
+
+        /* Mode Toggle */
+        .mode-toggle {
+            display: flex;
+            gap: 2px;
+            background: var(--border);
+            border-radius: var(--radius);
+            padding: 2px;
+            margin-bottom: 24px;
+        }
+
+        .mode-btn {
+            flex: 1;
+            padding: 10px 16px;
+            border: none;
+            background: transparent;
+            color: var(--text-secondary);
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            border-radius: calc(var(--radius) - 1px);
+            transition: all var(--transition);
+            letter-spacing: 0.5px;
+            white-space: nowrap;
+        }
+
+        .mode-btn.active {
+            background: var(--surface);
+            color: var(--text);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+        }
+
+        .mode-btn:active {
+            transform: scale(0.97);
+        }
+
+        /* Manual Offset Display */
+        .offset-display {
+            text-align: center;
+            padding: 8px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: var(--radius);
+            font-size: 12px;
+            color: var(--text-secondary);
+            letter-spacing: 0.5px;
+            margin-top: 16px;
+        }
+
+        /* Responsive Adjustments */
+        @media (max-width: 480px) {
+            .container {
+                padding: 16px;
+            }
+
+            .controls {
+                padding: 20px;
+            }
+
+            .color-preview {
+                margin-bottom: 24px;
+            }
+
+            input[type="range"] {
+                height: 12px;
+                /* Larger touch target */;
+            }
+
+            input[type="range"]::-webkit-slider-thumb {
+                width: 32px;
+                height: 32px;
+            }
+
+            .mode-btn {
+                padding: 12px 14px;
+                font-size: 12px;
+            }
+        }
+
+        @media (min-width: 768px) {
+            .container {
+                padding: 40px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Color Preview -->
+        <div class="color-preview" id="colorPreview"></div>
+
+        <!-- Timer Display -->
+        <div class="timer-section">
+            <div class="timer" id="timer">00:00:00</div>
+            <div class="date-label" id="dateLabel">Loading...</div>
+        </div>
+
+        <!-- Hex Display -->
+        <div class="hex-display" id="hexDisplay" title="Click to copy">
+            #000000
+            <span class="copied-tooltip" id="copiedTooltip">Copied!</span>
+        </div>
+
+        <!-- Controls -->
+        <div class="controls">
+            <!-- Mode Toggle -->
+            <div class="mode-toggle">
+                <button class="mode-btn active" data-mode="realtime" id="realtimeBtn">24h Cycle</button>
+                <button class="mode-btn" data-mode="minute" id="minuteBtn">1min Cycle</button>
+            </div>
+
+            <!-- Hue Control -->
+            <div class="control-group" id="hueGroup">
+                <div class="control-label">
+                    <span>HUE</span>
+                    <span class="control-value" id="hueValue">0°</span>
+                </div>
+                <input type="range" min="0" max="360" value="0" class="hue-slider" id="hueSlider">
+            </div>
+
+            <!-- Saturation Control -->
+            <div class="control-group">
+                <div class="control-label">
+                    <span>SATURATION</span>
+                    <span class="control-value" id="satValue">65%</span>
+                </div>
+                <input type="range" min="0" max="100" value="65" id="satSlider">
+            </div>
+
+            <!-- Lightness Control -->
+            <div class="control-group">
+                <div class="control-label">
+                    <span>LIGHTNESS</span>
+                    <span class="control-value" id="lightValue">40%</span>
+                </div>
+                <input type="range" min="0" max="100" value="40" id="lightSlider">
+            </div>
+
+            <!-- Offset Display -->
+            <div class="offset-display" id="offsetDisplay">
+                Manual Hue Offset: +0°
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // State management
+        const state = {
+            mode: 'realtime', // 'realtime' or 'minute'
+            manualHueOffset: 0,
+            baseHue: 0,
+            saturation: 65,
+            lightness: 40,
+            isManualMode: false,
+        };
+
+        // DOM Elements
+        const elements = {
+            colorPreview: document.getElementById('colorPreview'),
+            timer: document.getElementById('timer'),
+            dateLabel: document.getElementById('dateLabel'),
+            hexDisplay: document.getElementById('hexDisplay'),
+            copiedTooltip: document.getElementById('copiedTooltip'),
+            hueSlider: document.getElementById('hueSlider'),
+            hueValue: document.getElementById('hueValue'),
+            satSlider: document.getElementById('satSlider'),
+            satValue: document.getElementById('satValue'),
+            lightSlider: document.getElementById('lightSlider'),
+            lightValue: document.getElementById('lightValue'),
+            offsetDisplay: document.getElementById('offsetDisplay'),
+            realtimeBtn: document.getElementById('realtimeBtn'),
+            minuteBtn: document.getElementById('minuteBtn'),
+        };
+
+        // Utility functions
+        function hslToHex(h, s, l) {
+            s /= 100;
+            l /= 100;
+            const a = s * Math.min(l, 1 - l);
+            const f = n => {
+                const k = (n + h / 30) % 12;
+                const color = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+                return Math.round(255 * color).toString(16).padStart(2, '0');
+            };
+            return `#${f(0)}${f(8)}${f(4)}`.toUpperCase();
+        }
+
+        function updateColorDisplay() {
+            const h = ((state.baseHue + state.manualHueOffset) % 360 + 360) % 360;
+            const s = state.saturation;
+            const l = state.lightness;
+            const hex = hslToHex(h, s, l);
+
+            // Update preview circle
+            elements.colorPreview.style.backgroundColor = `hsl(${h}, ${s}%, ${l}%)`;
+
+            // Update hex display
+            elements.hexDisplay.childNodes[0].textContent = hex;
+
+            // Update slider positions
+            elements.hueSlider.value = h;
+            elements.hueValue.textContent = `${Math.round(h)}°`;
+            elements.satSlider.value = s;
+            elements.satValue.textContent = `${Math.round(s)}%`;
+            elements.lightSlider.value = l;
+            elements.lightValue.textContent = `${Math.round(l)}%`;
+
+            // Update body background subtly
+            document.body.style.backgroundColor = `hsl(${h}, ${Math.min(s, 20)}%, ${Math.max(5, l - 30)}%)`;
+        }
+
+        function updateTimer() {
+            const now = new Date();
+            const hours = now.getHours().toString().padStart(2, '0');
+            const minutes = now.getMinutes().toString().padStart(2, '0');
+            const seconds = now.getSeconds().toString().padStart(2, '0');
+            elements.timer.textContent = `${hours}:${minutes}:${seconds}`;
+
+            // Update date
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            elements.dateLabel.textContent = now.toLocaleDateString('en-US', options);
+
+            // Calculate base hue based on mode
+            if (state.mode === 'realtime') {
+                const msSinceMidnight = (now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds()) * 1000 +
+                    now.getMilliseconds();
+                state.baseHue = (msSinceMidnight / 86400000) * 360;
+            } else {
+                // Minute cycle
+                const msInMinute = (now.getSeconds() * 1000) + now.getMilliseconds();
+                state.baseHue = (msInMinute / 60000) * 360;
+            }
+
+            updateColorDisplay();
+            requestAnimationFrame(() => setTimeout(updateTimer, 50));
+        }
+
+        // Event Handlers
+        function handleHueChange(e) {
+            state.isManualMode = true;
+            const rect = elements.hueSlider.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const percentage = Math.max(0, Math.min(1, x / rect.width));
+            const hue = percentage * 360;
+
+            // Calculate offset from base hue
+            const currentBase = state.baseHue;
+            let offset = hue - currentBase;
+
+            // Normalize offset to -180 to 180 range
+            if (offset > 180) offset -= 360;
+            if (offset < -180) offset += 360;
+
+            state.manualHueOffset = offset;
+            elements.offsetDisplay.textContent =
+                `Manual Hue Offset: ${offset >= 0 ? '+' : ''}${Math.round(offset)}°`;
+            updateColorDisplay();
+        }
+
+        function handleSatChange(e) {
+            state.saturation = parseInt(e.target.value);
+            updateColorDisplay();
+        }
+
+        function handleLightChange(e) {
+            state.lightness = parseInt(e.target.value);
+            updateColorDisplay();
+        }
+
+        function handleModeSwitch(mode) {
+            state.mode = mode;
+            state.isManualMode = false;
+            state.manualHueOffset = 0;
+            elements.offsetDisplay.textContent = 'Manual Hue Offset: +0°';
+
+            // Update button states
+            elements.realtimeBtn.classList.toggle('active', mode === 'realtime');
+            elements.minuteBtn.classList.toggle('active', mode === 'minute');
+        }
+
+        function copyHexToClipboard() {
+            const hex = elements.hexDisplay.childNodes[0].textContent.trim();
+            navigator.clipboard.writeText(hex).then(() => {
+                elements.copiedTooltip.classList.add('show');
+                setTimeout(() => {
+                    elements.copiedTooltip.classList.remove('show');
+                }, 1500);
+            });
+        }
+
+        // Initialize
+        function init() {
+            // Set up event listeners
+            elements.hueSlider.addEventListener('input', handleHueChange);
+            elements.hueSlider.addEventListener('change', handleHueChange);
+            elements.satSlider.addEventListener('input', handleSatChange);
+            elements.lightSlider.addEventListener('input', handleLightChange);
+            elements.hexDisplay.addEventListener('click', copyHexToClipboard);
+
+            elements.realtimeBtn.addEventListener('click', () => handleModeSwitch('realtime'));
+            elements.minuteBtn.addEventListener('click', () => handleModeSwitch('minute'));
+
+            // Touch events for mobile
+            elements.hueSlider.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                handleHueChange(e.touches[0]);
+            });
+
+            elements.hueSlider.addEventListener('touchmove', (e) => {
+                e.preventDefault();
+                handleHueChange(e.touches[0]);
+            });
+
+            // Start timer
+            updateTimer();
+        }
+
+        // Start the app
+        init();
+    </script>
+</body>
+</html>
